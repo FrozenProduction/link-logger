@@ -4,6 +4,12 @@ A URL shortener with click analytics — a full-stack application built with Rea
 
 **Live demo:** https://link-logger-pink.vercel.app/
 
+## Screenshots
+
+| Dashboard | API docs (Swagger) |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![API docs](docs/screenshots/api-docs.png) |
+
 ## What it does
 
 Create short, custom URLs from long links and track clicks with a simple analytics dashboard. The app stores link metadata and click counts in SQLite and provides a clean UI for management.

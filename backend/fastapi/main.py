@@ -164,12 +164,12 @@ def create_link(request: Request, payload: LinkCreateRequest):
 
 
 @app.get("/api/links", response_model=list[LinkResponse])
-def list_links():
+def list_links(request: Request):
     with get_db() as db:
         rows = db.execute(
             "SELECT id, original_url, short_code, created_at, clicks FROM links ORDER BY created_at DESC"
         ).fetchall()
-        base_url = get_base_url_from_env() or "http://localhost:8000"
+        base_url = get_base_url_from_env() or str(request.url).rsplit("/api", 1)[0]
         return [
             LinkResponse(
                 id=r["id"],
@@ -184,7 +184,7 @@ def list_links():
 
 
 @app.get("/api/links/{link_id}", response_model=LinkDetailResponse)
-def get_link(link_id: int):
+def get_link(request: Request, link_id: int):
     with get_db() as db:
         link = db.execute(
             "SELECT id, original_url, short_code, created_at, clicks FROM links WHERE id = ?",
@@ -206,7 +206,7 @@ def get_link(link_id: int):
         ).fetchall()
         clicks_breakdown = {r["day"]: r["count"] for r in clicks}
 
-        base_url = get_base_url_from_env() or "http://localhost:8000"
+        base_url = get_base_url_from_env() or str(request.url).rsplit("/api", 1)[0]
         return LinkDetailResponse(
             id=link["id"],
             original_url=link["original_url"],

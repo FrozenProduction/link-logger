@@ -30,6 +30,11 @@ else
     echo "   ✗ Create link FAILED: $LINK"
     exit 1
 fi
+
+# Extract the link ID from the create response so the rest of the suite
+# works correctly even if the DB already contains other rows.
+LINK_ID=$(echo "$LINK" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['id'])")
+echo "   (using link ID: $LINK_ID)"
 echo ""
 
 # 3. List links
@@ -39,8 +44,8 @@ echo "   Links: $LIST"
 echo ""
 
 # 4. Link details
-echo "4. Link details for #1..."
-DETAIL=$(curl -s "$API_URL/api/links/1")
+echo "4. Link details for #$LINK_ID..."
+DETAIL=$(curl -s "$API_URL/api/links/$LINK_ID")
 echo "   Detail: $DETAIL"
 echo ""
 
@@ -52,9 +57,9 @@ echo ""
 
 # 6. Analytics after redirect
 echo "6. Analytics after redirect..."
-ANALYTICS=$(curl -s "$API_URL/api/links/1")
+ANALYTICS=$(curl -s "$API_URL/api/links/$LINK_ID")
 CLICK_COUNT=$(echo "$ANALYTICS" | grep -o '"clicks":[0-9]*' | cut -d: -f2)
-echo "   Clicks on link #1: $CLICK_COUNT (expected: >= 1)"
+echo "   Clicks on link #$LINK_ID: $CLICK_COUNT (expected: >= 1)"
 if [ "$CLICK_COUNT" -ge 1 ] 2>/dev/null; then
     echo "   ✓ Analytics working"
 else

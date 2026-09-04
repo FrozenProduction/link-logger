@@ -65,6 +65,6 @@ coverage/
 .coverage
 htmlcov/
 
-# Screenshots
-docs/screenshots/*.png
-docs/screenshots/*.jpg
+# Screenshots (committed — used by README to showcase the live UI)
+# docs/screenshots/*.png
+# docs/screenshots/*.jpg
