@@ -1,19 +1,27 @@
 import sqlite3
-from contextlib import contextmanager
+import hashlib
+import secrets
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, AnyUrl, field_validator
-import random
 import string
 import os
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="Link Logger API",
     description="URL shortener with analytics",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS — allows the Vercel frontend to access the API
@@ -109,7 +117,13 @@ class LinkDetailResponse(LinkResponse):
 
 def generate_short_code(length: int = 6) -> str:
     chars = string.ascii_letters + string.digits
-    return "".join(random.choices(chars, k=length))
+    return "".join(secrets.choice(chars) for _ in range(length))
+
+
+def anonymize_ip(ip: str) -> str:
+    """One-way hash of visitor IPs — analytics counts stay accurate
+    without storing raw addresses alongside click history."""
+    return hashlib.sha256(ip.encode("utf-8")).hexdigest()[:32]
 
 
 def build_short_url(base_url: str, short_code: str) -> str:
@@ -118,10 +132,6 @@ def build_short_url(base_url: str, short_code: str) -> str:
 
 
 # --- Routes ---
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 
 @app.post("/api/links", response_model=LinkResponse, status_code=201)
@@ -144,10 +154,15 @@ def create_link(request: Request, payload: LinkCreateRequest):
                 short_code = generate_short_code(6)
 
         created_at = datetime.now(timezone.utc).isoformat()
-        db.execute(
-            "INSERT INTO links (original_url, short_code, created_at, clicks) VALUES (?, ?, ?, 0)",
-            (str(payload.original_url), short_code, created_at),
-        )
+        try:
+            db.execute(
+                "INSERT INTO links (original_url, short_code, created_at, clicks) VALUES (?, ?, ?, 0)",
+                (str(payload.original_url), short_code, created_at),
+            )
+        except sqlite3.IntegrityError:
+            # Lost a race on the UNIQUE(short_code) constraint (custom code
+            # taken between check and insert, or random collision).
+            raise HTTPException(status_code=400, detail="Custom code already exists")
         link_id = db.execute(
             "SELECT last_insert_rowid()"
         ).fetchone()[0]
@@ -233,7 +248,7 @@ def redirect_to_original(code: str, request: Request):
             (
                 link["id"],
                 datetime.now(timezone.utc).isoformat(),
-                request.client.host if request.client else "unknown",
+                anonymize_ip(request.client.host) if request.client else "unknown",
                 request.headers.get("user-agent", "unknown"),
             ),
         )

@@ -34,6 +34,7 @@ The API behind Link Logger. Handles short link creation, storage, redirects, and
 
 ## Design Notes
 
-- **Click analytics** — each link stores a `clicks` count and a `clicks_by_day` breakdown (a JSON dict keyed by date). It is not a full analytics system, but it is enough to show how the tracking works.
-- **Custom codes** — when creating a link, you can optionally provide a custom short code. If none is given, a random 6-character code is generated.
+- **Click analytics** — each link stores a `clicks` counter plus one row per visit in a `clicks` table, aggregated per day on read. It is not a full analytics system, but it is enough to show how the tracking works.
+- **Privacy** — visitor IPs are stored only as one-way SHA-256 hashes, not raw addresses. Counts stay accurate without keeping identifiable data next to click history.
+- **Custom codes** — when creating a link, you can optionally provide a custom short code. If none is given, a cryptographically random 6-character code is generated (`secrets` module). The UNIQUE constraint is enforced at insert time, so a lost race returns a clean 400, not a 500.
 - **Redirect** — `GET /{code}` returns a `302 Found` to the original URL and increments the click count in the same request.

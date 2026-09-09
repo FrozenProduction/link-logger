@@ -43,6 +43,30 @@ The backend exposes a REST API with Swagger docs at `/docs`:
 
 Interactive API docs are available at the [live API](https://link-logger-api.onrender.com/docs).
 
+## Running Locally
+
+Backend (Python 3.11+, no system packages needed beyond `uv`):
+
+```bash
+cd backend/fastapi
+uv run --with fastapi==0.133.1 --with uvicorn==0.41.0 --with pydantic==2.13.4 \
+  uvicorn main:app --port 8000
+```
+
+A `link_logger.db` SQLite file is created next to `main.py` on first run (gitignored, never commit it). API at `http://localhost:8000`, docs at `http://localhost:8000/docs`.
+
+Frontend:
+
+```bash
+cd frontend/react
+npm install
+npm run dev
+```
+
+Opens on `http://localhost:5173` against the local API. Production builds use `VITE_API_URL` for the deployed backend.
+
+> Note: the Render deployment is ephemeral — links created on the live demo disappear on restart. Local data persists in your SQLite file.
+
 ## Design Choices
 
 - **SQLite** — keeps the backend deployable as a single file; no external database needed. Fine for this scale.

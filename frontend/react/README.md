@@ -8,8 +8,8 @@ The React frontend for Link Logger. Create short links, view them, see click ana
 
 - **React 18** — hooks-based components (`useState`, `useEffect`). No class components.
 - **Vite 5** — build tool and dev server. Handles the build and dev proxy to the backend.
-- **Vanilla CSS (inline styles)** — no CSS framework. Each component owns its styles as JavaScript objects. This keeps the CSS local to the component and avoids a separate stylesheet layer for a project this size.
-- **Fetch API** — all HTTP calls go directly to the FastAPI backend. No Axios, no wrapper library.
+- **Vanilla CSS (inline styles)** — no CSS framework. Shared style objects live in `src/components/styles.js`; components are `LinkForm`, `LinkList`, `LinkDetail`, API calls in `src/services/api.js`, date formatting in `src/utils/format.js`.
+- **Fetch API** — HTTP calls go through a tiny wrapper in `src/services/api.js` (shared base URL, JSON errors as messages). No Axios.
 
 ## Development
 

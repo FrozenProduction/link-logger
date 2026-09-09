@@ -53,6 +53,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Local databases (NEVER commit — SQLite file is created on first run)
+*.db
+*.sqlite
+*.sqlite3
+
 # Build output (frontend)
 frontend/react/dist/
 
