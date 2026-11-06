@@ -42,7 +42,12 @@ export default function LinkTable({ links, loading, onDelete, onOpen, activeId }
           const confirming = confirmId === link.id;
           return (
             <li className="row" key={link.id}>
-              <CopyButton value={link.short_url} className="code" label={`/${link.short_code}`} />
+              <CopyButton
+                value={link.short_url}
+                className="code"
+                label={`/${link.short_code}`}
+                ariaLabel={`Copy short link ${link.short_url}`}
+              />
 
               <a
                 className="dest"
@@ -64,7 +69,7 @@ export default function LinkTable({ links, loading, onDelete, onOpen, activeId }
                   onClick={() => onOpen(link.id)}
                   aria-expanded={activeId === link.id}
                 >
-                  {link.clicks > 0 ? "Analytics" : "Details"}
+                  Analytics
                 </button>
                 <a className="btn-quiet" href={link.short_url} target="_blank" rel="noopener noreferrer">
                   Open

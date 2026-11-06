@@ -4,6 +4,9 @@
 set -e
 
 API_URL="${API_URL:-http://localhost:8000}"
+# Unique per run so the suite can be re-run against a database that already has
+# rows in it (it used to fail with "Custom code already exists" the second time).
+CODE="t$(date +%H%M%S)"
 echo "=== Link Logger Integration Test Suite ==="
 echo "API URL: $API_URL"
 echo ""
@@ -23,8 +26,8 @@ echo ""
 echo "2. Creating short link..."
 LINK=$(curl -s -X POST "$API_URL/api/links" \
     -H "Content-Type: application/json" \
-    -d '{"original_url":"https://example.com/integration-test","custom_code":"test123"}')
-if echo "$LINK" | grep -q '"short_code":"test123"'; then
+    -d "{\"original_url\":\"https://example.com/integration-test\",\"custom_code\":\"$CODE\"}")
+if echo "$LINK" | grep -q "\"short_code\":\"$CODE\""; then
     echo "   ✓ Link created: $LINK"
 else
     echo "   ✗ Create link FAILED: $LINK"
@@ -51,7 +54,7 @@ echo ""
 
 # 5. Redirect test (headers only)
 echo "5. Redirect test (HTTP headers only)..."
-REDIRECT=$(curl -s -o /dev/null -w "HTTP %{http_code} → %{redirect_url}\n" "$API_URL/test123")
+REDIRECT=$(curl -s -o /dev/null -w "HTTP %{http_code} → %{redirect_url}\n" "$API_URL/$CODE")
 echo "   Result: $REDIRECT"
 echo ""
 

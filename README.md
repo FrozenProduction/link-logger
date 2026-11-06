@@ -1,8 +1,10 @@
+<p align="center"><img src="docs/logo.png" width="88" alt="Link Logger mark"></p>
+
 # Link Logger
 
 A URL shortener with click analytics — a full-stack application built with React (Vite) and FastAPI.
 
-**Live demo:** https://link-logger-pink.vercel.app/
+**Live demo:** https://link-logger-pink.vercel.app/ · **CI:** ![CI](https://github.com/FrozenProduction/link-logger/actions/workflows/test.yml/badge.svg)
 
 ## Screenshots
 
@@ -78,6 +80,7 @@ Opens on `http://localhost:5173` against the local API. Production builds use `V
 - **SQLite** — keeps the backend deployable as a single file; no external database needed. Fine for this scale.
 - **Vanilla CSS, one stylesheet with design tokens** — no CSS framework and no inline styles. Every colour and face enters through a `:root` token, so the palette can be swapped in one place.
 - **A drawn direction, not a default** — the palette ("olive on bone", one olive ink on a bone page, colour spent on the data) and the type pair came from a curated library rather than the usual blue-on-grey. Contrast is computed, not eyeballed: ink 8.69:1, muted 5.02:1, the button 8.69:1 on the bone page.
+- **One mark, every size** — the chain is drawn on a 32-unit grid with 2-unit walls and 2-unit holes, so the same artwork survives 16 px instead of needing a second, simplified favicon. Verified: at 16 px it still rasterises as two separate links with two enclosed holes.
 - **Vite** — fast dev server, simple build output. Lighter than Create React App for a single-page app.
 - **FastAPI** — automatic OpenAPI schema generation means the API docs write themselves from the code. Less boilerplate.
 - **CORS configured** — the backend explicitly allows the Vercel frontend origin, so the split deployment (frontend on Vercel, backend on Render) works without issues.

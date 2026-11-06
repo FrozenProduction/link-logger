@@ -41,7 +41,15 @@ export default function App() {
     <>
       <div className="app">
         <header className="masthead">
-          <h1>Link Logger</h1>
+          <h1 className="brand">
+            <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <g transform="translate(16 16) rotate(45) translate(-16 -16)" fill="currentColor">
+                <path fillRule="evenodd" d="M3 11h10v10H3Zm3 3h4v4H6Z" />
+                <path fillRule="evenodd" d="M17 11h10v10H17Zm3 3h4v4h-4Z" />
+              </g>
+            </svg>
+            Link Logger
+          </h1>
           <div className="masthead__meta">
             <span className="count">
               {links.length} {links.length === 1 ? "link" : "links"}

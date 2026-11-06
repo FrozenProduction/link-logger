@@ -4,12 +4,17 @@ import CopyButton from "./CopyButton.jsx";
 
 const CODE_RE = /^[A-Za-z0-9_-]{3,20}$/;
 
-/** Adds https:// when someone types "example.com" — never rewrites a real scheme. */
+// A hostname with a dot, an IP, or localhost — with optional port and path.
+const HOSTISH = /^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-z0-9-]+(\.[a-z0-9-]+)+)(:\d+)?([/?#]|$)/i;
+
+/** Adds https:// when someone types "example.com". Refuses "a/" and "aa" —
+ *  those are typos, and pretending they are hosts fills the list with junk. */
 function normaliseUrl(raw) {
   const v = raw.trim();
-  if (!v) return v;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return v;
-  if (/\s/.test(v)) return v;
+  if (!v) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return v; // already has a scheme
+  if (/\s/.test(v)) return "";
+  if (!HOSTISH.test(v)) return "";
   return `https://${v}`;
 }
 
@@ -25,11 +30,16 @@ export default function CreateBar({ onCreated }) {
   const submit = async (e) => {
     e.preventDefault();
     if (codeIsBad) return;
+    const target = normaliseUrl(url);
+    if (!target) {
+      setError("That does not look like a web address. Try example.com/page-break.");
+      return;
+    }
     setBusy(true);
     setError("");
     setCreated(null);
     try {
-      const link = await createLink(normaliseUrl(url), code.trim() || null);
+      const link = await createLink(target, code.trim() || null);
       setCreated(link);
       setUrl("");
       setCode("");

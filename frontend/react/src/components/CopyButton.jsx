@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
  * navigator.clipboard needs a secure context, so file:// and plain http fall
  * back to a hidden textarea + execCommand instead of failing silently.
  */
-export default function CopyButton({ value, label = "Copy", className = "btn-quiet" }) {
+export default function CopyButton({ value, label = "Copy", className = "btn-quiet", ariaLabel }) {
   const [done, setDone] = useState(false);
   const timer = useRef(null);
 
@@ -34,7 +34,7 @@ export default function CopyButton({ value, label = "Copy", className = "btn-qui
   };
 
   return (
-    <button type="button" className={className} onClick={copy} aria-live="polite">
+    <button type="button" className={className} onClick={copy} aria-live="polite" aria-label={ariaLabel}>
       {done ? "Copied" : label}
     </button>
   );

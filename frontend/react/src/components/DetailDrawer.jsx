@@ -27,6 +27,13 @@ export default function DetailDrawer({ linkId, onClose }) {
     };
   }, [linkId, open]);
 
+  // A closed drawer must be unreachable: it still renders (for the slide
+  // transition), so without `inert` its buttons stay in the tab order and in
+  // the accessibility tree — an aria-hidden-with-focusable-children violation.
+  useEffect(() => {
+    if (drawerRef.current) drawerRef.current.inert = !open;
+  }, [open]);
+
   // Escape closes; Tab is trapped inside; focus starts on the close button.
   // aria-modal="true" promises all three, so the trap is not optional.
   useEffect(() => {
@@ -83,7 +90,6 @@ export default function DetailDrawer({ linkId, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Link analytics"
-        aria-hidden={!open}
       >
         <div className="drawer__top">
           <h2>{data ? `/${data.short_code}` : "Analytics"}</h2>
