@@ -20,3 +20,11 @@ export function formatDate(value) {
     year: "numeric",
   });
 }
+
+/** "2026-11-06" -> "6 Nov". The API groups clicks by DATE(), which is raw ISO. */
+export function formatDay(value) {
+  if (!value) return "";
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
