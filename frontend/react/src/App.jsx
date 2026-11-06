@@ -44,8 +44,8 @@ export default function App() {
           <h1 className="brand">
             <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
               <g transform="translate(16 16) rotate(45) translate(-16 -16)" fill="currentColor">
-                <path fillRule="evenodd" d="M3 11h10v10H3Zm3 3h4v4H6Z" />
-                <path fillRule="evenodd" d="M17 11h10v10H17Zm3 3h4v4h-4Z" />
+                <path fillRule="evenodd" d="M4 11h10v10H4Zm3 3h4v4H7Z" />
+                <path fillRule="evenodd" d="M18 11h10v10H18Zm3 3h4v4h-4Z" />
               </g>
             </svg>
             Link Logger
