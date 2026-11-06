@@ -87,6 +87,16 @@ class LinkCreateRequest(BaseModel):
     original_url: AnyUrl
     custom_code: Optional[str] = None
 
+    @field_validator("original_url")
+    @classmethod
+    def http_schemes_only(cls, v):
+        # AnyUrl accepts javascript:, data:, file: and ftp:. A shortener that
+        # redirects to those is an open redirect and, once the UI renders the
+        # destination as a link, stored XSS. Only http(s) can be shortened.
+        if v.scheme not in ("http", "https"):
+            raise ValueError("only http and https URLs can be shortened")
+        return v
+
     @field_validator("custom_code")
     @classmethod
     def validate_custom_code(cls, v):
