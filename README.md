@@ -31,7 +31,7 @@ Create short, custom URLs from long links and track clicks with a simple analyti
 | Layer      | Technology                              | Why                                                                 |
 |------------|------------------------------------------|----------------------------------------------------------------------|
 | Frontend   | React 18, Vite, vanilla CSS              | Light setup, no UI framework overhead, full control over the UI      |
-| Backend    | Python 3.13, FastAPI, SQLite, Pydantic  | FastAPI gives automatic OpenAPI docs; SQLite keeps deployment simple  |
+| Backend    | Python 3.11+, FastAPI, SQLite, Pydantic  | FastAPI gives automatic OpenAPI docs; SQLite keeps deployment simple  |
 | Deployment | Vercel (frontend), Render (backend)     | Free tiers, simple setup, enough for a portfolio project              |
 
 ## API
