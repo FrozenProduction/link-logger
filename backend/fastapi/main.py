@@ -53,6 +53,9 @@ LINK_TTL_DAYS = int(os.environ.get("LINK_TTL_DAYS", "30"))
 # its own. This keeps the whole demo within a fixed row budget regardless of
 # how many tokens are generated.
 MAX_TOTAL_LINKS = int(os.environ.get("MAX_TOTAL_LINKS", "2000"))
+# Browsers stop around 2,000 characters; anything longer is not a destination,
+# it is a way to fill the database and amplify every list response.
+MAX_URL_LENGTH = int(os.environ.get("MAX_URL_LENGTH", "2048"))
 # The expired page is served by the API host, so its link back must point at
 # the app, not at "/" (which on the API host is a 404).
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://link-logger-pink.vercel.app").rstrip("/")
@@ -103,6 +106,8 @@ class LinkCreateRequest(BaseModel):
         # destination as a link, stored XSS. Only http(s) can be shortened.
         if v.scheme not in ("http", "https"):
             raise ValueError("only http and https URLs can be shortened")
+        if len(str(v)) > MAX_URL_LENGTH:
+            raise ValueError(f"URL is too long (maximum {MAX_URL_LENGTH} characters)")
         return v
 
     @field_validator("custom_code")
@@ -416,10 +421,13 @@ def delete_link(link_id: Annotated[int, Path(ge=1, le=MAX_LINK_ID)], owner: Owne
 @app.get("/api/health")
 def health_check():
     try:
-        total = store.execute("SELECT COUNT(*) AS count FROM links")[0][0]["count"]
-    except StoreError as exc:
+        store.execute("SELECT 1")
+    except StoreError:
+        # No upstream text here: the error body can name an internal host, and
+        # this endpoint is unauthenticated. Details belong in the server log.
         return JSONResponse(
             status_code=503,
-            content={"status": "degraded", "store": store.name, "detail": str(exc)},
+            content={"status": "degraded", "store": store.name},
         )
-    return {"status": "ok", "store": store.name, "links": total}
+    # Deliberately no row count: it would expose aggregate activity to anyone.
+    return {"status": "ok", "store": store.name}

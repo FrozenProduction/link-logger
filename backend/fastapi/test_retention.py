@@ -43,10 +43,18 @@ def client():
         yield test_client
 
 
+def table_count() -> int:
+    """Rows in the fixture database. The API no longer publishes a count —
+    that was aggregate-activity disclosure on an unauthenticated endpoint."""
+    with sqlite3.connect(os.environ["LINK_LOGGER_DB"]) as db:
+        return db.execute("SELECT COUNT(*) FROM links").fetchone()[0]
+
+
 def test_health_reports_local_store(client):
     body = client.get("/api/health").json()
     assert body["status"] == "ok"
     assert body["store"] == "sqlite"
+    assert set(body) == {"status", "store"}, "health must not publish counts or diagnostics"
 
 
 def test_limits_are_published_to_the_ui(client):
@@ -151,6 +159,16 @@ def test_non_http_destination_is_rejected(client):
     assert response.status_code == 422
 
 
+def test_overlong_destination_is_rejected(client):
+    response = client.post(
+        "/api/links",
+        json={"original_url": "https://example.com/" + "a" * 2100},
+        headers=headers("token-long-0001"),
+    )
+    assert response.status_code == 422
+    assert "too long" in response.text.lower()
+
+
 def test_reserved_custom_codes_are_rejected(client):
     # /docs, /redoc and /openapi.json are registered before /{code}: a link
     # with one of those codes could be created but never followed.
@@ -173,7 +191,7 @@ def test_out_of_range_ids_are_rejected_not_500(client):
 def test_full_table_refuses_instead_of_evicting_someone_else(client, monkeypatch):
     # The demo has a hard row budget. When it is reached, a new create must be
     # refused — deleting the globally oldest link would throw away a stranger's.
-    before = client.get("/api/health").json()["links"]
+    before = table_count()
     assert before > 0, "earlier tests should have left rows behind"
     monkeypatch.setattr(main, "MAX_TOTAL_LINKS", before)
 
@@ -185,7 +203,7 @@ def test_full_table_refuses_instead_of_evicting_someone_else(client, monkeypatch
 
     assert response.status_code == 503
     assert response.json()["detail"] == "This demo is at capacity. Try again later."
-    assert client.get("/api/health").json()["links"] == before, "nothing may be deleted"
+    assert table_count() == before, "nothing may be deleted"
 
 
 def test_expired_rows_do_not_block_capacity(client, monkeypatch):
@@ -197,7 +215,7 @@ def test_expired_rows_do_not_block_capacity(client, monkeypatch):
             ("2000-01-01T00:00:00.000000+00:00",),
         )
 
-    total = client.get("/api/health").json()["links"]
+    total = table_count()
     monkeypatch.setattr(main, "MAX_TOTAL_LINKS", total)
 
     fresh = create(client, token, code="cap003")
@@ -211,10 +229,10 @@ def test_full_table_still_allows_a_storage_neutral_replacement(client, monkeypat
     for index in range(10):
         create(client, token, code=f"rep{index:03d}")
 
-    total = client.get("/api/health").json()["links"]
+    total = table_count()
     monkeypatch.setattr(main, "MAX_TOTAL_LINKS", total)
 
     replaced = create(client, token, code="rep999")
 
     assert replaced["evicted_code"] is not None
-    assert client.get("/api/health").json()["links"] == total
+    assert table_count() == total

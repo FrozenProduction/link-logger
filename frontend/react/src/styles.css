@@ -109,7 +109,7 @@ button{font:inherit;color:inherit}
 .table{width:100%;padding:0;margin:0;border-collapse:collapse}
 .table__head,.row{
   display:grid;
-  grid-template-columns:minmax(132px,auto) minmax(0,1fr) 68px 116px minmax(190px,auto);
+  grid-template-columns:minmax(132px,auto) minmax(0,1fr) 68px 116px 240px;
   gap:var(--s3);align-items:center;
 }
 .table__head{

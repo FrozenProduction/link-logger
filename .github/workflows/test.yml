@@ -16,6 +16,9 @@ on:
       - 'test_backend.sh'
       - '.github/workflows/test.yml'
 
+permissions:
+  contents: read
+
 jobs:
   test-backend:
     runs-on: ubuntu-latest

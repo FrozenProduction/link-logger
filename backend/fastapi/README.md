@@ -19,7 +19,7 @@ analytics, and the retention rules that keep the demo bounded.
 | DELETE | `/api/links/{id}` | required     | Delete a link; `404` when it is not this owner's              |
 | GET    | `/api/limits`     | —            | `{"links_per_owner": 10, "ttl_days": 30}`                     |
 | GET    | `/{code}`         | —            | `302` to the destination, `410 Gone` once expired             |
-| GET    | `/api/health`     | —            | `{"status", "store", "links"}`; `503` when the store is down  |
+| GET    | `/api/health`     | —            | `{"status", "store"}`; `503` when the store is down. No counts or upstream diagnostics — it is unauthenticated |
 
 ## Storage
 
@@ -53,6 +53,8 @@ locks the request/response shape.
 | `LINK_LOGGER_DB`        | `link_logger.db`     | SQLite path when Turso is not configured                       |
 | `BASE_URL`              | derived from request | Public base URL used to build short links (set in production)  |
 | `MAX_LINKS_PER_OWNER`   | `10`                 | Live links kept per browser                                    |
+| `MAX_TOTAL_LINKS`       | `2000`               | Rows across all owners; at the limit a create answers `503`    |
+| `MAX_URL_LENGTH`        | `2048`               | Longest accepted destination, in characters                    |
 | `LINK_TTL_DAYS`         | `30`                 | Days before a link expires                                     |
 | `FRONTEND_URL`          | the Vercel app       | Where the `410` page links back to                             |
 
