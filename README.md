@@ -119,6 +119,20 @@ The free Render instance sleeps after a period of inactivity, so the first reque
 pause can take ~30 seconds. That is the host, not the database: links survive it, and the
 UI shows the API as offline only while the request is actually failing.
 
+## Limits and known trade-offs
+
+- **No accounts.** A browser owns its ten slots through a random token in `localStorage`. Clearing
+  site data starts a fresh, empty set of slots; the old links keep resolving until they expire, they
+  are simply no longer listed anywhere.
+- **A hard row budget.** 2,000 links across all visitors (`MAX_TOTAL_LINKS`). At the cap a create
+  answers `503` rather than deleting someone else's link; expired rows are purged first, and an
+  owner replacing one of their own links is still allowed because it does not grow the table.
+- **Destinations are capped at 2,048 characters**, which is what browsers themselves support.
+- **Clicks are counted, not rate-limited.** A bot can inflate a link's counter; nothing in the app
+  depends on that number being trustworthy.
+- **Writes are not transactional across statements** on the Turso path, so an interrupted eviction
+  can leave one extra row behind. Admission itself is a single statement, so the cap holds.
+
 ## Design Choices
 
 - **SQLite, portable to Turso** — the same SQL runs on a local file and on libSQL, so
