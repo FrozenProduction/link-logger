@@ -170,10 +170,35 @@ def test_out_of_range_ids_are_rejected_not_500(client):
     assert client.delete("/api/links/9223372036854775808", headers=headers_).status_code == 422
 
 
-def test_global_cap_bounds_the_table(client, monkeypatch):
-    # Owner tokens are free to mint, so the per-owner cap alone cannot bound
-    # the table. A zero budget proves the global guard runs on every create.
-    # This test wipes the fixture database, so it must stay last.
-    monkeypatch.setattr(main, "MAX_TOTAL_LINKS", 0)
-    create(client, "token-global-0001", code="glob01")
-    assert client.get("/api/health").json()["links"] == 0
+def test_full_table_refuses_instead_of_evicting_someone_else(client, monkeypatch):
+    # The demo has a hard row budget. When it is reached, a new create must be
+    # refused — deleting the globally oldest link would throw away a stranger's.
+    before = client.get("/api/health").json()["links"]
+    assert before > 0, "earlier tests should have left rows behind"
+    monkeypatch.setattr(main, "MAX_TOTAL_LINKS", before)
+
+    response = client.post(
+        "/api/links",
+        json={"original_url": "https://example.com/cap", "custom_code": "cap001"},
+        headers=headers("token-cap-00001"),
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "This demo is at capacity. Try again later."
+    assert client.get("/api/health").json()["links"] == before, "nothing may be deleted"
+
+
+def test_expired_rows_do_not_block_capacity(client, monkeypatch):
+    token = "token-cap-00002"
+    create(client, token, code="cap002")
+    with sqlite3.connect(os.environ["LINK_LOGGER_DB"]) as db:
+        db.execute(
+            "UPDATE links SET expires_at = ? WHERE short_code = 'cap002'",
+            ("2000-01-01T00:00:00.000000+00:00",),
+        )
+
+    total = client.get("/api/health").json()["links"]
+    monkeypatch.setattr(main, "MAX_TOTAL_LINKS", total)
+
+    fresh = create(client, token, code="cap003")
+    assert fresh["short_code"] == "cap003", "the expired row should have freed the budget"

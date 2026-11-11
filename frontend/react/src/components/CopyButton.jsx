@@ -60,16 +60,21 @@ export default function CopyButton({ value, label = "Copy", className = "btn-qui
 
   if (compact) {
     return (
-      <button
-        type="button"
-        className={`copy-icon ${done ? "copy-icon--done" : ""}`}
-        onClick={copy}
-        aria-label={ariaLabel || label}
-        title={done ? "Copied" : ariaLabel || label}
-        aria-live="polite"
-      >
-        {done ? <CheckIcon /> : <CopyIcon />}
-      </button>
+      <>
+        <button
+          type="button"
+          className={`copy-icon ${done ? "copy-icon--done" : ""}`}
+          onClick={copy}
+          aria-label={ariaLabel || label}
+          title={done ? "Copied" : ariaLabel || label}
+        >
+          {done ? <CheckIcon /> : <CopyIcon />}
+        </button>
+        {/* The glyph is aria-hidden, so the confirmation needs its own text. */}
+        <span className="sr-only" role="status" aria-live="polite">
+          {done ? "Copied to clipboard" : ""}
+        </span>
+      </>
     );
   }
 

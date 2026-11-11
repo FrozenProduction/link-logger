@@ -195,17 +195,6 @@ def delete_links(ids: list[int]) -> None:
     store.execute(f"DELETE FROM links WHERE id IN ({marks})", tuple(ids))
 
 
-def purge_expired(owner: str) -> None:
-    """Expired links stop counting against the cap the moment they expire, and
-    are physically removed here instead of by a cron job (free tiers have none)."""
-    expired = store.execute(
-        "SELECT id FROM links WHERE owner_token = ? AND expires_at <= ?",
-        (owner, utc_iso(utc_now())),
-    )[0]
-    if expired:
-        delete_links([row["id"] for row in expired])
-
-
 def evict_overflow(owner: str) -> tuple[Optional[str], int]:
     """Delete this owner's links beyond the cap. Returns (oldest evicted code,
     count evicted)."""
@@ -220,17 +209,19 @@ def evict_overflow(owner: str) -> tuple[Optional[str], int]:
     return extra[-1]["short_code"], len(extra)
 
 
-def enforce_global_cap() -> None:
-    """Keep the newest MAX_TOTAL_LINKS rows across all owners. Without this,
-    anyone can mint tokens and grow the table past any per-owner limit."""
-    total = store.execute("SELECT COUNT(*) AS count FROM links")[0][0]["count"]
-    overflow = total - MAX_TOTAL_LINKS
-    if overflow <= 0:
-        return
-    oldest = store.execute(
-        "SELECT id FROM links ORDER BY created_at ASC, id ASC LIMIT ?", (overflow,)
+def purge_expired_everywhere() -> None:
+    """Expired rows are dead weight for everyone. Dropping them before the
+    capacity check means a table full of expired links does not block new ones."""
+    expired = store.execute(
+        "SELECT id FROM links WHERE expires_at <= ?", (utc_iso(utc_now()),)
     )[0]
-    delete_links([row["id"] for row in oldest])
+    if expired:
+        delete_links([row["id"] for row in expired])
+
+
+def at_capacity() -> bool:
+    total = store.execute("SELECT COUNT(*) AS count FROM links")[0][0]["count"]
+    return total >= MAX_TOTAL_LINKS
 
 
 def row_to_response(row: dict, base_url: str) -> LinkResponse:
@@ -276,7 +267,14 @@ def limits():
 
 @app.post("/api/links", response_model=LinkCreatedResponse, status_code=201)
 def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
-    purge_expired(owner)
+    purge_expired_everywhere()
+    if at_capacity():
+        # Deleting a stranger's link to make room would be worse than refusing:
+        # the demo is full, and the caller can come back later.
+        raise HTTPException(
+            status_code=503,
+            detail="This demo is at capacity. Try again later.",
+        )
 
     if payload.custom_code:
         short_code = payload.custom_code
@@ -308,7 +306,6 @@ def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
         raise
 
     evicted_code, evicted_count = evict_overflow(owner)
-    enforce_global_cap()
     base_url = public_base_url(request)
     return LinkCreatedResponse(
         id=inserted[0]["id"],

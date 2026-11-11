@@ -109,7 +109,7 @@ button{font:inherit;color:inherit}
 .table{width:100%;padding:0;margin:0;border-collapse:collapse}
 .table__head,.row{
   display:grid;
-  grid-template-columns:132px minmax(0,1fr) 68px 116px minmax(190px,auto);
+  grid-template-columns:minmax(132px,auto) minmax(0,1fr) 68px 116px minmax(190px,auto);
   gap:var(--s3);align-items:center;
 }
 .table__head{
@@ -128,8 +128,9 @@ button{font:inherit;color:inherit}
 }
 .code:hover{border-bottom-color:var(--olive)}
 /* The code is a real link now; copy lives in the icon beside it. */
-.code-cell{display:inline-flex;align-items:center;gap:6px;min-width:0;justify-self:start}
-a.code{color:var(--olive);text-decoration:none}
+.code-cell{display:inline-flex;align-items:center;gap:6px;min-width:0;justify-self:start;max-width:100%}
+a.code{color:var(--olive);text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .copy-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0;color:var(--olive-mute);cursor:pointer;flex:none}
 .copy-icon:hover{color:var(--olive)}
 .copy-icon svg{width:14px;height:14px;display:block}

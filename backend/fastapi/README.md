@@ -82,8 +82,9 @@ which is fine behind one hostname and wrong behind a proxy that rewrites the hos
 ## Tests
 
 ```bash
-pytest -q                     # retention, ownership, expiry, Turso wire format
-bash ../../test_backend.sh    # end-to-end against a running server
+pip install -r requirements-dev.txt   # runtime pins + pytest + httpx
+pytest -q                             # retention, ownership, expiry, Turso wire format
+bash ../../test_backend.sh            # end-to-end against a running server
 ```
 
 `test_retention.py` runs against a throwaway SQLite file; `test_store_wire.py` stubs the HTTP
