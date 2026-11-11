@@ -24,7 +24,8 @@ slots, scoped to their browser — no account, no email, nothing to sign up for.
   answers `410 Gone` with a small page instead of a dead redirect. Once the owner's next
   create purges the row, the code is simply unknown (`404`) and may be reused.
 - Link list with destination, short URL, click count, creation date and time left
-- **Click the short code to copy it** (with a clipboard fallback for non-secure contexts)
+- **The short code is a real link** — it opens the short URL and counts the click; a copy
+  button beside it copies the link (with a clipboard fallback for non-secure contexts)
 - Per-row actions: analytics, open the short link, delete with an inline confirm
 - Click-through analytics in a side panel, with per-day bars
 - Honest states: loading skeleton, empty state, and an error banner that never reports a

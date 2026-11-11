@@ -127,6 +127,13 @@ button{font:inherit;color:inherit}
   text-align:left;justify-self:start; /* a <button> centres its label by default */
 }
 .code:hover{border-bottom-color:var(--olive)}
+/* The code is a real link now; copy lives in the icon beside it. */
+.code-cell{display:inline-flex;align-items:center;gap:6px;min-width:0;justify-self:start}
+a.code{color:var(--olive);text-decoration:none}
+.copy-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:0;color:var(--olive-mute);cursor:pointer;flex:none}
+.copy-icon:hover{color:var(--olive)}
+.copy-icon svg{width:14px;height:14px;display:block}
+.copy-icon--done{color:var(--olive)}
 .dest{
   min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   color:var(--olive-mute-surface);font-size:var(--t-sm);text-decoration:none;
@@ -187,7 +194,7 @@ button{font:inherit;color:inherit}
   .create{grid-template-columns:minmax(0,1fr);gap:var(--s3)}
   .table__head{display:none}
   .row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"code clicks" "dest when" "actions actions";row-gap:6px}
-  .code{grid-area:code}.clicks{grid-area:clicks}.dest{grid-area:dest}.when{grid-area:when;text-align:right}
+  .code-cell{grid-area:code}.clicks{grid-area:clicks}.dest{grid-area:dest}.when{grid-area:when;text-align:right}
   .actions{grid-area:actions;justify-content:flex-start;margin-top:4px}
 }
 

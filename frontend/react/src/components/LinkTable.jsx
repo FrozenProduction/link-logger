@@ -53,12 +53,22 @@ export default function LinkTable({
           const confirming = confirmId === link.id;
           return (
             <li className="row" key={link.id}>
-              <CopyButton
-                value={link.short_url}
-                className="code"
-                label={`/${link.short_code}`}
-                ariaLabel={`Copy short link ${link.short_url}`}
-              />
+              <span className="code-cell">
+                <a
+                  className="code"
+                  href={link.short_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.short_url}
+                >
+                  /{link.short_code}
+                </a>
+                <CopyButton
+                  value={link.short_url}
+                  compact
+                  ariaLabel={`Copy short link ${link.short_url}`}
+                />
+              </span>
 
               <a
                 className="dest"
