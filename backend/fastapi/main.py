@@ -219,11 +219,6 @@ def purge_expired_everywhere() -> None:
         delete_links([row["id"] for row in expired])
 
 
-def at_capacity() -> bool:
-    total = store.execute("SELECT COUNT(*) AS count FROM links")[0][0]["count"]
-    return total >= MAX_TOTAL_LINKS
-
-
 def row_to_response(row: dict, base_url: str) -> LinkResponse:
     return LinkResponse(
         id=row["id"],
@@ -268,13 +263,6 @@ def limits():
 @app.post("/api/links", response_model=LinkCreatedResponse, status_code=201)
 def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
     purge_expired_everywhere()
-    if at_capacity():
-        # Deleting a stranger's link to make room would be worse than refusing:
-        # the demo is full, and the caller can come back later.
-        raise HTTPException(
-            status_code=503,
-            detail="This demo is at capacity. Try again later.",
-        )
 
     if payload.custom_code:
         short_code = payload.custom_code
@@ -292,10 +280,26 @@ def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
     created_at = utc_iso(now)
     expires_at = utc_iso(now + timedelta(days=LINK_TTL_DAYS))
     try:
+        # Admission is part of the insert, in one statement: a check followed by
+        # a separate INSERT lets two concurrent requests both take the last slot.
+        # A full owner is still allowed through — their own eviction below keeps
+        # the row count unchanged, so a replacement never needs extra storage.
         inserted = store.execute(
             "INSERT INTO links (original_url, short_code, created_at, expires_at, owner_token, clicks) "
-            "VALUES (?, ?, ?, ?, ?, 0) RETURNING id",
-            (str(payload.original_url), short_code, created_at, expires_at, owner),
+            "SELECT ?, ?, ?, ?, ?, 0 "
+            "WHERE (SELECT COUNT(*) FROM links) < ? "
+            "   OR (SELECT COUNT(*) FROM links WHERE owner_token = ?) >= ? "
+            "RETURNING id",
+            (
+                str(payload.original_url),
+                short_code,
+                created_at,
+                expires_at,
+                owner,
+                MAX_TOTAL_LINKS,
+                owner,
+                MAX_LINKS_PER_OWNER,
+            ),
         )[0]
     except (sqlite3.IntegrityError, StoreError) as exc:
         # Lost a race on UNIQUE(short_code): a custom code taken between the
@@ -304,6 +308,12 @@ def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
         if is_unique_violation(exc):
             raise HTTPException(status_code=400, detail="Custom code already exists")
         raise
+
+    if not inserted:
+        raise HTTPException(
+            status_code=503,
+            detail="This demo is at capacity. Try again later.",
+        )
 
     evicted_code, evicted_count = evict_overflow(owner)
     base_url = public_base_url(request)

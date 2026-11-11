@@ -202,3 +202,19 @@ def test_expired_rows_do_not_block_capacity(client, monkeypatch):
 
     fresh = create(client, token, code="cap003")
     assert fresh["short_code"] == "cap003", "the expired row should have freed the budget"
+
+
+def test_full_table_still_allows_a_storage_neutral_replacement(client, monkeypatch):
+    # An owner at their own cap replaces a link, so the row count does not grow.
+    # Refusing that would break the advertised ten-slot behaviour at capacity.
+    token = "token-replace-01"
+    for index in range(10):
+        create(client, token, code=f"rep{index:03d}")
+
+    total = client.get("/api/health").json()["links"]
+    monkeypatch.setattr(main, "MAX_TOTAL_LINKS", total)
+
+    replaced = create(client, token, code="rep999")
+
+    assert replaced["evicted_code"] is not None
+    assert client.get("/api/health").json()["links"] == total

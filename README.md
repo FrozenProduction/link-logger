@@ -2,7 +2,7 @@
 
 # Link Logger
 
-A URL shortener with click analytics and honest retention — React (Vite) on the front, FastAPI and SQLite on the back.
+A URL shortener with click analytics and honest retention — React (Vite) on the front, FastAPI and SQLite/libSQL on the back.
 
 **Live demo:** https://link-logger-pink.vercel.app/ · **CI:** ![CI](https://github.com/FrozenProduction/link-logger/actions/workflows/test.yml/badge.svg)
 
