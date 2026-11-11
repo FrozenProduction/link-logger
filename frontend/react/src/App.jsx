@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { listLinks, deleteLink } from "./services/api.js";
+import { listLinks, deleteLink, getLimits } from "./services/api.js";
 import CreateBar from "./components/CreateBar.jsx";
 import LinkTable from "./components/LinkTable.jsx";
 import DetailDrawer from "./components/DetailDrawer.jsx";
 
+// Shown until /api/limits answers, and kept if it ever fails: the limit is a
+// label, not a reason to leave the page empty.
+const DEFAULT_LIMITS = { links_per_owner: 10, ttl_days: 30 };
+
 export default function App() {
   const [links, setLinks] = useState([]);
+  const [limits, setLimits] = useState(DEFAULT_LIMITS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailId, setDetailId] = useState(null);
@@ -15,7 +20,12 @@ export default function App() {
     try {
       // A failure here must NOT look like "you have no links" — the previous
       // list stays on screen and the banner says what actually happened.
-      setLinks(await listLinks());
+      const [nextLinks, nextLimits] = await Promise.all([
+        listLinks(),
+        getLimits().catch(() => null),
+      ]);
+      setLinks(nextLinks);
+      if (nextLimits) setLimits(nextLimits);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -52,7 +62,7 @@ export default function App() {
           </h1>
           <div className="masthead__meta">
             <span className="count">
-              {links.length} {links.length === 1 ? "link" : "links"}
+              {links.length}/{limits.links_per_owner} links
             </span>
             <span className={`status ${error ? "status--offline" : ""}`}>
               {error ? "api offline" : "api ok"}
@@ -74,6 +84,7 @@ export default function App() {
 
           <LinkTable
             links={links}
+            limits={limits}
             loading={loading}
             onDelete={handleDelete}
             onOpen={setDetailId}
@@ -85,7 +96,10 @@ export default function App() {
       <footer className="foot">
         <div className="foot__in">
           <span>Link Logger</span>
-          <span>FastAPI · React · SQLite</span>
+          <span>
+            {limits.links_per_owner} links per browser · {limits.ttl_days}-day retention
+          </span>
+          <span>FastAPI · React · libSQL</span>
         </div>
       </footer>
 

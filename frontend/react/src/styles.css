@@ -100,6 +100,7 @@ button{font:inherit;color:inherit}
 /* ---- notices ---- */
 .notice{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s4);padding:var(--s3) 0;border-bottom:1px solid var(--rule);color:var(--danger);font-size:var(--t-sm)}
 .notice--ok{color:var(--olive)}
+.notice--muted{color:var(--olive-mute)}
 .notice code{font-family:var(--mono)}
 .create > .notice{grid-column:1 / -1;margin:0}
 .notice__hint{color:var(--olive-mute)}
@@ -133,6 +134,7 @@ button{font:inherit;color:inherit}
 .dest:hover{color:var(--olive);text-decoration:underline;text-underline-offset:3px}
 .clicks{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:left;font-size:var(--t-sm)}
 .when{font-size:var(--t-xs);color:var(--olive-mute)}
+.when small{display:block;font-size:inherit;white-space:nowrap}
 .actions{display:flex;gap:var(--s3);justify-content:flex-end;flex-wrap:wrap}
 
 /* ---- states ---- */

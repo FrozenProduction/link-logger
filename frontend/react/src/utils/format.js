@@ -28,3 +28,16 @@ export function formatDay(value) {
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
+
+/** Retention, in the same voice as formatDate: "expires in 23 days" — never a
+ *  bare timestamp, because the question a user has is "how long do I have". */
+export function formatExpiry(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const remaining = d.getTime() - Date.now();
+  if (remaining <= 0) return "expired";
+  const days = Math.floor(remaining / 86400000);
+  if (days >= 1) return `expires in ${days} day${days === 1 ? "" : "s"}`;
+  return "expires today";
+}

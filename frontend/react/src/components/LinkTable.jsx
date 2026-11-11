@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatDate } from "../utils/format.js";
+import { formatDate, formatExpiry } from "../utils/format.js";
 import CopyButton from "./CopyButton.jsx";
 
 function Skeleton() {
@@ -14,7 +14,14 @@ function Skeleton() {
   );
 }
 
-export default function LinkTable({ links, loading, onDelete, onOpen, activeId }) {
+export default function LinkTable({
+  links,
+  loading,
+  onDelete,
+  onOpen,
+  activeId,
+  limits = { links_per_owner: 10, ttl_days: 30 },
+}) {
   const [confirmId, setConfirmId] = useState(null);
 
   if (loading) return <Skeleton />;
@@ -23,7 +30,11 @@ export default function LinkTable({ links, loading, onDelete, onOpen, activeId }
     return (
       <div className="empty">
         <h2>No links yet</h2>
-        <p>Paste a long URL above and it comes back short, with a click count that updates every time someone follows it.</p>
+        <p>
+          Paste a long URL above and it comes back short, with a click count that updates every
+          time someone follows it. This browser keeps up to {limits.links_per_owner} links, each
+          for {limits.ttl_days} days.
+        </p>
       </div>
     );
 
@@ -60,7 +71,10 @@ export default function LinkTable({ links, loading, onDelete, onOpen, activeId }
               </a>
 
               <span className="clicks">{link.clicks}</span>
-              <span className="when">{formatDate(link.created_at)}</span>
+              <span className="when">
+                {formatDate(link.created_at)}
+                <small>{formatExpiry(link.expires_at)}</small>
+              </span>
 
               <div className="actions">
                 <button

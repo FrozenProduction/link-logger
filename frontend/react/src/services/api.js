@@ -3,6 +3,32 @@
 // every deployment that did not set VITE_API_URL call someone's localhost.
 const API_BASE = (import.meta.env?.VITE_API_URL || "").replace(/\/$/, "");
 
+// The owner token is what makes "my links" true: it is generated once per
+// browser and scopes every call. It is not a login — losing it simply starts a
+// fresh, empty slot — so localStorage is the right place for it.
+const OWNER_KEY = "linklogger.owner";
+let memoryOwner = null; // fallback for browsers where storage is blocked
+
+function makeToken() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+    b.toString(16).padStart(2, "0")
+  ).join("");
+}
+
+function ownerToken() {
+  try {
+    let token = localStorage.getItem(OWNER_KEY);
+    if (!token) {
+      token = makeToken();
+      localStorage.setItem(OWNER_KEY, token);
+    }
+    return token;
+  } catch {
+    return (memoryOwner ??= makeToken());
+  }
+}
+
 // FastAPI returns `detail` as a string for HTTPException, but as an ARRAY of
 // error objects for 422 validation failures. `new Error(array)` stringifies to
 // "[object Object]", which is what the old UI showed the user. Flatten it.
@@ -22,7 +48,7 @@ async function request(path, options = {}) {
   let res;
   try {
     res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Owner-Token": ownerToken() },
       ...options,
     });
   } catch {
@@ -39,6 +65,8 @@ async function request(path, options = {}) {
 }
 
 export const listLinks = () => request("/api/links");
+
+export const getLimits = () => request("/api/limits");
 
 export const createLink = (original_url, custom_code) =>
   request("/api/links", {

@@ -106,6 +106,14 @@ export default function CreateBar({ onCreated }) {
           <CopyButton value={created.short_url} className="btn-quiet" label="Copy link" />
         </p>
       )}
+      {created?.evicted_code && (
+        <p className="notice notice--muted">
+          <span>
+            All slots were full — the oldest link, <code>/{created.evicted_code}</code>, was
+            removed to make room.
+          </span>
+        </p>
+      )}
     </form>
   );
 }

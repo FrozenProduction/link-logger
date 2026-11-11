@@ -1,15 +1,41 @@
 # Link Logger — Frontend (React + Vite)
 
-The React frontend for Link Logger. Create short links, view them, see click analytics, and delete links.
+Create short links, see the ten slots you have, watch clicks, and inspect per-day analytics.
 
 **Live app:** https://link-logger-pink.vercel.app/
 
 ## Tech
 
-- **React 18** — hooks-based components (`useState`, `useEffect`). No class components.
-- **Vite 5** — build tool and dev server. Handles the build and dev proxy to the backend.
-- **Vanilla CSS (inline styles)** — no CSS framework. Shared style objects live in `src/components/styles.js`; components are `LinkForm`, `LinkList`, `LinkDetail`, API calls in `src/services/api.js`, date formatting in `src/utils/format.js`.
-- **Fetch API** — HTTP calls go through a tiny wrapper in `src/services/api.js` (shared base URL, JSON errors as messages). No Axios.
+- **React 18** — hooks only (`useState`, `useEffect`, `useCallback`). No class components.
+- **Vite 6** — dev server and build. `server.proxy` forwards `/api` to the local backend.
+- **One stylesheet with tokens** — `src/styles.css`; no CSS framework, no inline styles.
+  Every colour enters through a `:root` token so the palette can be swapped in one place.
+- **Fetch API** — a small wrapper in `src/services/api.js` (base URL, owner header, JSON
+  errors as readable messages). No Axios.
+
+## Structure
+
+```
+src/
+|-- App.jsx                 # loads links + limits, owns the drawer state
+|-- components/
+|   |-- CreateBar.jsx       # create form, copy chip, eviction notice
+|   |-- LinkTable.jsx       # rows, expiry line, per-row actions, inline delete confirm
+|   |-- DetailDrawer.jsx    # analytics panel (focus trap, inert when closed)
+|   `-- CopyButton.jsx      # clipboard with a non-secure-context fallback
+|-- services/api.js         # owner token + endpoints
+|-- utils/format.js         # relative dates, day labels, "expires in N days"
+`-- styles.css              # tokens + layout
+```
+
+## The owner token
+
+There are no accounts. On first use the app generates a UUID, stores it in `localStorage`
+under `linklogger.owner`, and sends it as `X-Owner-Token` on every request. That token is
+what makes the list "yours": another browser has a different one and sees its own links.
+
+Clearing site data starts a fresh, empty set of slots. The old links still resolve until
+their 30-day expiry, they are simply no longer listed anywhere.
 
 ## Development
 
@@ -19,15 +45,15 @@ npm install
 npm run dev
 ```
 
-The Vite dev server runs at `http://localhost:5173` and proxies `/api` requests to the local backend at `http://localhost:8000`.
+Dev server on `http://localhost:5173`, proxying `/api` to `http://localhost:8000`.
 
 ## Environment Variables
 
-| Variable      | Default (dev)        | Description                              |
-|---------------|----------------------|------------------------------------------|
-| `VITE_API_URL` | `http://localhost:8000` | Backend API base URL. In production, set to the deployed API URL. |
+| Variable       | Default | Description                                                        |
+|----------------|---------|--------------------------------------------------------------------|
+| `VITE_API_URL` | empty   | API origin. Empty means same-origin `/api`, which is right behind one domain; set it when Vercel serves the UI and Render serves the API |
 
-At build time, Vite replaces `import.meta.env.VITE_API_URL` with the actual value. If the variable is not set, the build falls back to the Render backend URL so the app still works.
+Vite bakes the value in at build time — changing it needs a new build, not a restart.
 
 ## Build
 
@@ -35,22 +61,28 @@ At build time, Vite replaces `import.meta.env.VITE_API_URL` with the actual valu
 npm run build
 ```
 
-Outputs to `dist/` — ready for static hosting on Vercel, Netlify, or similar.
+Outputs `dist/`, ready for static hosting.
 
 ## Features
 
-- Form to create short links with an optional custom code
-- List of all links showing original URL, short URL, click count, and creation date
-- Click-through analytics with a per-day breakdown
-- Delete a link with a confirmation step
-- Responsive layout using the system font stack — no external font loading
+- Create short links with an optional custom code; the URL is normalised (`example.com` →
+  `https://example.com`) and refused when it looks like a typo
+- Ten slots per browser, shown as `3/10 links` in the masthead; the oldest link is retired
+  when an eleventh is created and the form says which code went
+- Expiry under each date ("expires in 29 days"), and a `410` page on the API for links that
+  have passed it
+- Analytics drawer with total clicks and a per-day breakdown
+- Delete with an inline confirm
+- Loading skeleton, empty state and an error banner that never disguises a failed request
+  as "no links"
+- Responsive down to 390px; keyboard reachable; `prefers-reduced-motion` respected
 
 ## API calls
 
-The frontend calls these backend endpoints (defined in [`backend/fastapi/README.md`](../../../backend/fastapi/README.md)):
+Defined in [`backend/fastapi/README.md`](../../../backend/fastapi/README.md):
 
-- `POST /api/links` — create a short link
-- `GET /api/links` — list all links
-- `GET /api/links/{id}` — link details and analytics
-- `DELETE /api/links/{id}` — delete a link
-- `GET /api/health` — health check
+- `POST /api/links` — create (needs `X-Owner-Token`)
+- `GET /api/links` — list this browser's links (needs `X-Owner-Token`)
+- `GET /api/limits` — slots and retention shown in the UI
+- `GET /api/links/{id}` — details and analytics (needs `X-Owner-Token`)
+- `DELETE /api/links/{id}` — delete (needs `X-Owner-Token`)

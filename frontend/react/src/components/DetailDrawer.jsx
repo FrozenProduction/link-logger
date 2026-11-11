@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getLinkDetail } from "../services/api.js";
-import { formatDate, formatDay } from "../utils/format.js";
+import { formatDate, formatDay, formatExpiry } from "../utils/format.js";
 import CopyButton from "./CopyButton.jsx";
 
 export default function DetailDrawer({ linkId, onClose }) {
@@ -120,6 +120,9 @@ export default function DetailDrawer({ linkId, onClose }) {
 
             <p className="drawer__k">Created</p>
             <p className="drawer__v">{formatDate(data.created_at)}</p>
+
+            <p className="drawer__k">Retention</p>
+            <p className="drawer__v">{formatExpiry(data.expires_at)}</p>
 
             <p className="drawer__k">Clicks per day</p>
             {days.length === 0 ? (
