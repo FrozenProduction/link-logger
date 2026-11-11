@@ -12,6 +12,9 @@ export default function App() {
   const [links, setLinks] = useState([]);
   const [limits, setLimits] = useState(DEFAULT_LIMITS);
   const [loading, setLoading] = useState(true);
+  // Distinguishes "the list is empty" from "the list never loaded": after a
+  // failed first request the table must not claim there are no links.
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [detailId, setDetailId] = useState(null);
 
@@ -26,6 +29,7 @@ export default function App() {
       ]);
       setLinks(nextLinks);
       if (nextLimits) setLimits(nextLimits);
+      setLoaded(true);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -35,6 +39,11 @@ export default function App() {
 
   useEffect(() => {
     load();
+    // Click counts change while the tab is away — a short link opened in a new
+    // tab should not leave yesterday's number sitting next to today's analytics.
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [load]);
 
   const handleDelete = async (id) => {
@@ -82,14 +91,16 @@ export default function App() {
             </div>
           )}
 
-          <LinkTable
-            links={links}
-            limits={limits}
-            loading={loading}
-            onDelete={handleDelete}
-            onOpen={setDetailId}
-            activeId={detailId}
-          />
+          {(loading || loaded || links.length > 0) && (
+            <LinkTable
+              links={links}
+              limits={limits}
+              loading={loading}
+              onDelete={handleDelete}
+              onOpen={setDetailId}
+              activeId={detailId}
+            />
+          )}
         </main>
       </div>
 

@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import AnyUrl, BaseModel, field_validator
@@ -49,6 +49,10 @@ app.add_middleware(
 # cannot grow forever, and no cron job is needed on a free tier.
 MAX_LINKS_PER_OWNER = int(os.environ.get("MAX_LINKS_PER_OWNER", "10"))
 LINK_TTL_DAYS = int(os.environ.get("LINK_TTL_DAYS", "30"))
+# Owner tokens are free to mint, so the per-owner cap cannot bound the table on
+# its own. This keeps the whole demo within a fixed row budget regardless of
+# how many tokens are generated.
+MAX_TOTAL_LINKS = int(os.environ.get("MAX_TOTAL_LINKS", "2000"))
 # The expired page is served by the API host, so its link back must point at
 # the app, not at "/" (which on the API host is a 404).
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://link-logger-pink.vercel.app").rstrip("/")
@@ -59,6 +63,14 @@ if not FRONTEND_URL.startswith(("http://", "https://")):
 # it does not authorise access beyond that browser's own demo links. Validated
 # anyway so junk cannot poison the column or the index.
 OWNER_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+# Literal routes are registered before /{code}, so these codes can be created
+# but never reached — a link that silently costs a slot and never redirects.
+RESERVED_CODES = {"docs", "redoc", "openapi.json"}
+
+# SQLite rejects integers outside its signed 64-bit range at bind time with an
+# OverflowError, which surfaced as a 500. Bound the path parameter instead.
+MAX_LINK_ID = 2**63 - 1
 
 
 def utc_now() -> datetime:
@@ -100,6 +112,8 @@ class LinkCreateRequest(BaseModel):
             raise ValueError("custom_code must be 3-20 characters")
         if v and not all(c.isalnum() or c in "-_" for c in v):
             raise ValueError("custom_code can only contain letters, numbers, - and _")
+        if v and v.lower() in RESERVED_CODES:
+            raise ValueError("that code is reserved by the API documentation routes")
         return v
 
 
@@ -206,6 +220,19 @@ def evict_overflow(owner: str) -> tuple[Optional[str], int]:
     return extra[-1]["short_code"], len(extra)
 
 
+def enforce_global_cap() -> None:
+    """Keep the newest MAX_TOTAL_LINKS rows across all owners. Without this,
+    anyone can mint tokens and grow the table past any per-owner limit."""
+    total = store.execute("SELECT COUNT(*) AS count FROM links")[0][0]["count"]
+    overflow = total - MAX_TOTAL_LINKS
+    if overflow <= 0:
+        return
+    oldest = store.execute(
+        "SELECT id FROM links ORDER BY created_at ASC, id ASC LIMIT ?", (overflow,)
+    )[0]
+    delete_links([row["id"] for row in oldest])
+
+
 def row_to_response(row: dict, base_url: str) -> LinkResponse:
     return LinkResponse(
         id=row["id"],
@@ -281,6 +308,7 @@ def create_link(request: Request, payload: LinkCreateRequest, owner: OwnerDep):
         raise
 
     evicted_code, evicted_count = evict_overflow(owner)
+    enforce_global_cap()
     base_url = public_base_url(request)
     return LinkCreatedResponse(
         id=inserted[0]["id"],
@@ -306,7 +334,7 @@ def list_links(request: Request, owner: OwnerDep):
 
 
 @app.get("/api/links/{link_id}", response_model=LinkDetailResponse)
-def get_link(request: Request, link_id: int, owner: OwnerDep):
+def get_link(request: Request, link_id: Annotated[int, Path(ge=1, le=MAX_LINK_ID)], owner: OwnerDep):
     found = store.execute(
         "SELECT id, original_url, short_code, created_at, expires_at, clicks FROM links "
         "WHERE id = ? AND owner_token = ? AND expires_at > ?",
@@ -359,7 +387,7 @@ def redirect_to_original(code: str, request: Request):
             link["id"],
             utc_iso(utc_now()),
             anonymize_ip(request.client.host) if request.client else "unknown",
-            request.headers.get("user-agent", "unknown"),
+            request.headers.get("user-agent", "unknown")[:256],
         ),
     )
     store.execute("UPDATE links SET clicks = clicks + 1 WHERE id = ?", (link["id"],))
@@ -368,7 +396,7 @@ def redirect_to_original(code: str, request: Request):
 
 
 @app.delete("/api/links/{link_id}", status_code=204)
-def delete_link(link_id: int, owner: OwnerDep):
+def delete_link(link_id: Annotated[int, Path(ge=1, le=MAX_LINK_ID)], owner: OwnerDep):
     # Scoped to the owner: an id is guessable, a token is not.
     found = store.execute(
         "SELECT id FROM links WHERE id = ? AND owner_token = ?", (link_id, owner)

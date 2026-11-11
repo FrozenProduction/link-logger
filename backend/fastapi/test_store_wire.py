@@ -94,3 +94,38 @@ def test_auth_failure_is_not_reported_as_a_bad_request(monkeypatch):
     with pytest.raises(StoreError) as caught:
         TursoStore("libsql://db.turso.io", "wrong").execute("SELECT 1")
     assert "401" in str(caught.value)
+
+
+def test_malformed_response_is_never_success(monkeypatch):
+    # A truncated or proxy-mangled body used to decode as "no rows", so a
+    # DELETE could answer 204 without deleting anything.
+    for payload in ({}, {"results": []}, {"results": [{"type": "ok"}]}, {"results": [{"type": "ok", "response": {}}]}):
+        install_fake(monkeypatch, payload, [])
+        with pytest.raises(StoreError):
+            TursoStore("libsql://db.turso.io", "t").execute("DELETE FROM links WHERE id = ?", (1,))
+
+
+def test_blob_uses_the_base64_field(monkeypatch):
+    payload = {
+        "results": [
+            {
+                "type": "ok",
+                "response": {
+                    "type": "execute",
+                    "result": {
+                        "cols": [{"name": "b", "decltype": "BLOB"}],
+                        "rows": [[{"type": "blob", "base64": "YWJj"}]],
+                        "affected_row_count": 1,
+                    },
+                },
+            }
+        ]
+    }
+    captured = []
+    install_fake(monkeypatch, payload, captured)
+
+    rows, _ = TursoStore("libsql://db.turso.io", "t").execute("SELECT ? AS b", (b"xyz",))
+
+    assert rows == [{"b": b"abc"}]
+    args = json.loads(captured[0].data)["requests"][0]["stmt"]["args"]
+    assert args == [{"type": "blob", "base64": "eHl6"}]

@@ -149,3 +149,31 @@ def test_non_http_destination_is_rejected(client):
         headers=headers("token-scheme-0001"),
     )
     assert response.status_code == 422
+
+
+def test_reserved_custom_codes_are_rejected(client):
+    # /docs, /redoc and /openapi.json are registered before /{code}: a link
+    # with one of those codes could be created but never followed.
+    for code in ("docs", "redoc", "openapi.json", "DOCS"):
+        response = client.post(
+            "/api/links",
+            json={"original_url": "https://example.com/reserved", "custom_code": code},
+            headers=headers("token-reserved-01"),
+        )
+        assert response.status_code == 422, (code, response.text)
+
+
+def test_out_of_range_ids_are_rejected_not_500(client):
+    headers_ = headers("token-bigid-0001")
+    for path in ("/api/links/9223372036854775808", "/api/links/-9223372036854775809", "/api/links/0"):
+        assert client.get(path, headers=headers_).status_code == 422, path
+    assert client.delete("/api/links/9223372036854775808", headers=headers_).status_code == 422
+
+
+def test_global_cap_bounds_the_table(client, monkeypatch):
+    # Owner tokens are free to mint, so the per-owner cap alone cannot bound
+    # the table. A zero budget proves the global guard runs on every create.
+    # This test wipes the fixture database, so it must stay last.
+    monkeypatch.setattr(main, "MAX_TOTAL_LINKS", 0)
+    create(client, "token-global-0001", code="glob01")
+    assert client.get("/api/health").json()["links"] == 0

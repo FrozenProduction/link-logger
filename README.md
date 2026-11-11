@@ -21,7 +21,8 @@ slots, scoped to their browser — no account, no email, nothing to sign up for.
 - **Ten live links per browser.** Creating an eleventh retires the oldest one, and the UI
   says which link it replaced instead of letting it vanish silently
 - **30-day retention.** Every link carries an expiry; when it passes, the short code
-  answers `410 Gone` with a small page instead of a dead redirect
+  answers `410 Gone` with a small page instead of a dead redirect. Once the owner's next
+  create purges the row, the code is simply unknown (`404`) and may be reused.
 - Link list with destination, short URL, click count, creation date and time left
 - **Click the short code to copy it** (with a clipboard fallback for non-secure contexts)
 - Per-row actions: analytics, open the short link, delete with an inline confirm
@@ -84,7 +85,8 @@ npm run dev
 ```
 
 Opens on `http://localhost:5173` against the local API. A production build reads
-`VITE_API_URL`; if it is unset, requests go to the same origin.
+`VITE_API_URL`; when it is unset, `vite.config.js` falls back to the deployed API origin, so a
+fork must set the variable to its own backend.
 
 Tests:
 

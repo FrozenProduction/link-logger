@@ -51,7 +51,7 @@ Dev server on `http://localhost:5173`, proxying `/api` to `http://localhost:8000
 
 | Variable       | Default | Description                                                        |
 |----------------|---------|--------------------------------------------------------------------|
-| `VITE_API_URL` | empty   | API origin. Empty means same-origin `/api`, which is right behind one domain; set it when Vercel serves the UI and Render serves the API |
+| `VITE_API_URL` | deployed API origin | API origin baked in at build time. Set it to your own backend; the fallback exists so the portfolio deployment keeps working without extra configuration |
 
 Vite bakes the value in at build time — changing it needs a new build, not a restart.
 

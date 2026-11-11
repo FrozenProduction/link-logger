@@ -91,11 +91,20 @@ class TursoStore:
         except urllib.error.URLError as exc:
             raise StoreError(f"turso unreachable: {exc.reason}") from exc
 
-        result = (payload.get("results") or [{}])[0]
+        results = payload.get("results")
+        if not isinstance(results, list) or not results:
+            raise StoreError("turso: malformed response (no results)")
+        result = results[0]
         if result.get("type") == "error":
             raise StoreError(f"turso: {result.get('error', {}).get('message', 'unknown error')}")
 
-        executed = (result.get("response") or {}).get("result") or {}
+        response = result.get("response") or {}
+        executed = response.get("result") if response.get("type") == "execute" else None
+        if not isinstance(executed, dict):
+            # A truncated or proxy-mangled body must never read as "0 rows
+            # affected" — a DELETE would report success without deleting.
+            raise StoreError("turso: malformed response (no execute result)")
+
         columns = [column["name"] for column in executed.get("cols") or []]
         rows = [
             {name: _decode_value(value) for name, value in zip(columns, row)}
@@ -124,7 +133,8 @@ def _encode_value(value):
     if isinstance(value, float):
         return {"type": "float", "value": value}
     if isinstance(value, bytes):
-        return {"type": "blob", "value": base64.b64encode(value).decode("ascii")}
+        # The HTTP protocol names this field `base64`, not `value`.
+        return {"type": "blob", "base64": base64.b64encode(value).decode("ascii")}
     return {"type": "text", "value": str(value)}
 
 
@@ -137,7 +147,7 @@ def _decode_value(value):
     if kind == "float":
         return float(value["value"])
     if kind == "blob":
-        return base64.b64decode(value["value"])
+        return base64.b64decode(value["base64"])
     return value.get("value")
 
 
@@ -200,6 +210,9 @@ def init_db(store: SqliteStore | TursoStore) -> None:
     store.execute(
         "CREATE INDEX IF NOT EXISTS idx_links_owner ON links (owner_token, created_at DESC)"
     )
+    # Without this every analytics read and every delete scans the whole click
+    # table, so one owner's cost grows with everybody else's history.
+    store.execute("CREATE INDEX IF NOT EXISTS idx_clicks_link ON clicks (link_id)")
 
 
 store = build_store()

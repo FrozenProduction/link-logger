@@ -69,6 +69,7 @@ export default function CreateBar({ onCreated }) {
           onChange={(e) => setUrl(e.target.value)}
           required
           aria-invalid={error ? "true" : "false"}
+          aria-describedby={error ? "url-error" : undefined}
         />
       </div>
 
@@ -97,9 +98,13 @@ export default function CreateBar({ onCreated }) {
           3–20 characters, letters, numbers, hyphen or underscore.
         </p>
       )}
-      {error && <p className="notice">{error}</p>}
+      {error && (
+        <p className="notice" id="url-error" role="alert">
+          {error}
+        </p>
+      )}
       {created && (
-        <p className="notice notice--ok">
+        <p className="notice notice--ok" role="status">
           <span>
             Created <code className="code">{created.short_url}</code>
           </span>
@@ -107,7 +112,7 @@ export default function CreateBar({ onCreated }) {
         </p>
       )}
       {created?.evicted_code && (
-        <p className="notice notice--muted">
+        <p className="notice notice--muted" role="status">
           <span>
             All slots were full — the oldest link, <code>/{created.evicted_code}</code>, was
             removed to make room.
